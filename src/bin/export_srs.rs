@@ -1,7 +1,6 @@
 use ark_bls12_381::{Fq, Fq2, G1Affine, G2Affine};
-use ark_serialize::CanonicalSerialize;
+use ark_serialize::{CanonicalSerialize, Compress};
 use num_bigint::BigUint;
-use serde::{Deserialize, Serialize};
 use std::env::args;
 use std::{
     fs::File,
@@ -9,19 +8,10 @@ use std::{
 };
 use text_io::scan;
 
-#[cfg(feature = "parallel")]
-use rayon::prelude::*;
-
-use zei_algebra::{
-    bls12_381::{BLSG1, BLSG2},
-    traits::Group,
-};
-
 /// KZG commitment scheme style.
-#[derive(Serialize, Deserialize)]
 struct KZGCommitmentScheme {
-    public_parameter_group_1: Vec<BLSG1>,
-    public_parameter_group_2: Vec<BLSG2>,
+    public_parameter_group_1: Vec<G1Affine>,
+    public_parameter_group_2: Vec<G2Affine>,
 }
 
 impl KZGCommitmentScheme {
@@ -34,10 +24,10 @@ impl KZGCommitmentScheme {
         bytes.extend(len_2.to_le_bytes());
 
         for i in &self.public_parameter_group_1 {
-            bytes.extend(i.to_unchecked_bytes());
+            i.serialize_with_mode(&mut bytes, Compress::No).unwrap();
         }
         for i in &self.public_parameter_group_2 {
-            bytes.extend(i.to_unchecked_bytes());
+            i.serialize_with_mode(&mut bytes, Compress::No).unwrap();
         }
         bytes
     }
@@ -78,7 +68,7 @@ fn main() {
         let x_field_elem: Fq = x.into();
         let y_field_elem: Fq = y.into();
 
-        g1.push(G1Affine::new(x_field_elem, y_field_elem, false));
+        g1.push(G1Affine::new(x_field_elem, y_field_elem));
         counter = counter + 1;
         if counter % 10000 == 0 {
             println!("{}", counter);
@@ -89,11 +79,9 @@ fn main() {
 
     let size = 1 << n;
     println!("n: {}, size: {}", n, size);
-    let mut public_parameter_group_1: Vec<BLSG1> = vec![];
+    let mut public_parameter_group_1: Vec<G1Affine> = vec![];
     for elem in g1.iter().take(size + 3) {
-        let mut serialized = Vec::new();
-        elem.serialize(&mut serialized).unwrap();
-        public_parameter_group_1.push(BLSG1::from_compressed_bytes(&serialized[..]).unwrap());
+        public_parameter_group_1.push(*elem);
     }
     println!("g1 params success!");
 
@@ -138,33 +126,24 @@ fn main() {
         let x_field_elem = Fq2::new(x_c0_field_elem, x_c1_field_elem);
         let y_field_elem = Fq2::new(y_c0_field_elem, y_c1_field_elem);
 
-        let elem = G2Affine::new(x_field_elem, y_field_elem, false);
+        let elem = G2Affine::new(x_field_elem, y_field_elem);
         assert!(elem.is_on_curve());
         g2.push(elem);
 
         line.clear();
     }
 
-    let public_parameter_group_2: Vec<BLSG2> = ark_std::cfg_into_iter!(g2)
-        .map(|elem| {
-            let mut serialized = Vec::new();
-            elem.serialize(&mut serialized).unwrap();
-            BLSG2::from_compressed_bytes(&serialized[..]).unwrap()
-        })
-        .collect();
-    println!("g2 params success!");
-
     // 3. create crs.
     let crs = KZGCommitmentScheme {
         public_parameter_group_1,
-        public_parameter_group_2,
+        public_parameter_group_2: g2,
     };
     println!("crs success!");
 
     // 4. crs serialize to file.
-    let mut file_out = File::create(format!("zei_crs_bls12381_2_{}.dat", n)).unwrap();
+    let mut file_out = File::create(format!("srs_bls12381_2_{}.dat", n)).unwrap();
     let bytes = crs.to_unchecked_bytes();
     file_out.write_all(&bytes).unwrap();
 
-    println!("serialize to file: zei_crs_bls12381_2_{}.dat", n);
+    println!("serialize to file: srs_bls12381_2_{}.dat", n);
 }

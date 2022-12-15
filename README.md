@@ -1,7 +1,7 @@
 # export-setup-parameters
 This repo contains scripts that export the setup parameters to the arkworks-rs format.
 
-## zei crs size
+## ark bls12_381 srs size
 
 | n  | size      | file size        |
 | -- | --------- | ---------------- |
