@@ -1,5 +1,4 @@
 use ark_bls12_381::{Fq, Fq2, G1Affine, G2Affine};
-use ark_serialize::{CanonicalSerialize, Compress};
 use num_bigint::BigUint;
 use std::env::args;
 use std::{
@@ -8,30 +7,8 @@ use std::{
 };
 use text_io::scan;
 
-/// KZG commitment scheme style.
-struct KZGCommitmentScheme {
-    public_parameter_group_1: Vec<G1Affine>,
-    public_parameter_group_2: Vec<G2Affine>,
-}
-
-impl KZGCommitmentScheme {
-    /// serialize the parameters to unchecked bytes.
-    pub fn to_unchecked_bytes(&self) -> Vec<u8> {
-        let mut bytes = vec![];
-        let len_1 = self.public_parameter_group_1.len() as u32;
-        let len_2 = self.public_parameter_group_2.len() as u32;
-        bytes.extend(len_1.to_le_bytes());
-        bytes.extend(len_2.to_le_bytes());
-
-        for i in &self.public_parameter_group_1 {
-            i.serialize_with_mode(&mut bytes, Compress::No).unwrap();
-        }
-        for i in &self.public_parameter_group_2 {
-            i.serialize_with_mode(&mut bytes, Compress::No).unwrap();
-        }
-        bytes
-    }
-}
+mod kzg;
+use kzg::KZGCommitmentScheme;
 
 fn main() {
     let n = args()
@@ -138,9 +115,9 @@ fn main() {
         public_parameter_group_1,
         public_parameter_group_2: g2,
     };
-    println!("crs success!");
+    println!("srs success!");
 
-    // 4. crs serialize to file.
+    // 4. srs serialize to file.
     let mut file_out = File::create(format!("srs_bls12381_2_{}.dat", n)).unwrap();
     let bytes = crs.to_unchecked_bytes();
     file_out.write_all(&bytes).unwrap();
