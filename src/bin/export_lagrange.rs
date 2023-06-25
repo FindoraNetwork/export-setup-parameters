@@ -1,4 +1,4 @@
-use ark_bls12_381::{Fr, G1Affine, G1Projective};
+use ark_bn254::{Fr, G1Affine, G1Projective};
 use ark_ec::{AffineRepr, CurveGroup};
 use ark_poly::{EvaluationDomain, Radix2EvaluationDomain};
 use std::{fs::File, io::Write};
@@ -14,7 +14,7 @@ fn main() {
     let degree = 2usize.pow(n);
 
     println!("load srs file...");
-    let bytes = std::fs::read(format!("srs_bls12381_2_{}.dat", n)).expect("NO SRS FILE");
+    let bytes = std::fs::read("srs.dat").expect("NO SRS FILE");
     let p = KZGCommitmentScheme::from_unchecked_bytes(&bytes);
     let p1: Vec<G1Projective> = p.public_parameter_group_1[..degree]
         .iter()
@@ -31,9 +31,9 @@ fn main() {
         public_parameter_group_2: vec![],
     };
 
-    let mut file_out = File::create(format!("lagrange_srs_bls12381_{}.dat", n)).unwrap();
+    let mut file_out = File::create(format!("lagrange-srs-{}.bin", degree)).unwrap();
     let bytes = new_p.to_unchecked_bytes();
     file_out.write_all(&bytes).unwrap();
 
-    println!("serialize to file: lagrange_srs_bls12381_{}.dat", n);
+    println!("serialize to file: lagrange-srs-{}.bin", degree);
 }

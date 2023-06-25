@@ -1,4 +1,4 @@
-use ark_bls12_381::{G1Affine, G2Affine};
+use ark_bn254::{G1Affine, G2Affine};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize, Compress, Validate};
 
 /// KZG commitment scheme style.
